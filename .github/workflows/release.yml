@@ -117,6 +117,7 @@ jobs:
 
       - name: 设置应用图标
         run: |
+          New-Item -ItemType Directory -Path "build" -Force | Out-Null
           Copy-Item -Path "assets/icon.png" -Destination "build/appicon.png" -Force
           Write-Host "✅ 图标设置完成"
 
@@ -190,6 +191,7 @@ jobs:
 
       - name: 设置应用图标
         run: |
+          mkdir -p build
           cp assets/icon.png build/appicon.png
           echo "✅ 图标设置完成"
 
