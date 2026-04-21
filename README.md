@@ -6,16 +6,15 @@
  一款功能高度集成、界面精美的开发桌面工具集，集成多种开发常用工具：加密工具（MD5/Base64/国密SM3/URL编码）、格式化工具（JSON/XML）、文本比对工具、二维码生成等。操作便捷，为开发者提升工作效率。
 
 
-<!-- 第一行：核心状态 - CI/版本/许可证/平台 -->
 [![Release](https://img.shields.io/github/v/release/swxswxer/Devbox?style=flat-square&logo=github&color=blue&label=Release)](https://github.com/swxswxer/Devbox/releases/latest)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square&logo=opensourceinitiative&logoColor=white)](https://github.com/swxswxer/Devbox/blob/master/LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-blue?style=flat-square&logo=wails&logoColor=white)](https://github.com/swxswxer/Devbox/releases)
 
-<!-- 第二行：技术栈 -->
+
 [![Vue](https://img.shields.io/badge/Vue-3-42b883?style=flat-square&logo=vue.js&logoColor=white)](https://vuejs.org/)
 [![Wails](https://img.shields.io/badge/Wails-Go-00add8?style=flat-square&logo=go&logoColor=white)](https://wails.io/)
 
-<!-- 第三行：社区指标 -->
+
 
 [![Downloads](https://img.shields.io/github/downloads/swxswxer/Devbox/total?style=flat-square&logo=github&label=Downloads&color=brightgreen)](https://github.com/swxswxer/Devbox/releases)
 [![Stars](https://img.shields.io/github/stars/swxswxer/Devbox?style=flat-square&logo=github&label=Stars)](https://github.com/swxswxer/Devbox/stargazers)
@@ -60,7 +59,7 @@ wails dev
 # 构建 Wails 应用
 wails build
 ```
-  
+
 
 ## 功能模块
 

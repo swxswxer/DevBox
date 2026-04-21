@@ -1,350 +1,294 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import AppIcon from './AppIcon.vue'
 
 const inputText = ref('')
 const outputText = ref('')
+const mode = ref('encode')
 const showCopySuccess = ref(false)
 
-function encode() {
+const stats = computed(() => [
+  { label: '当前模式', value: mode.value === 'encode' ? 'URL 编码' : 'URL 解码' },
+  { label: '输入长度', value: `${inputText.value.length}` },
+  { label: '输出长度', value: `${outputText.value.length}` }
+])
+
+function transform() {
   if (!inputText.value.trim()) {
     outputText.value = ''
     return
   }
+
   try {
-    outputText.value = encodeURIComponent(inputText.value)
-  } catch (e) {
-    outputText.value = '编码失败: ' + e.message
+    outputText.value = mode.value === 'encode'
+      ? encodeURIComponent(inputText.value)
+      : decodeURIComponent(inputText.value)
+  } catch (error) {
+    outputText.value = mode.value === 'encode'
+      ? `编码失败: ${error.message}`
+      : '解码失败: 无效的 URL 编码字符串'
   }
 }
 
-function decode() {
-  if (!inputText.value.trim()) {
-    outputText.value = ''
-    return
-  }
-  try {
-    outputText.value = decodeURIComponent(inputText.value)
-  } catch (e) {
-    outputText.value = '解码失败: 无效的 URL 编码字符串'
-  }
-}
-
-function clearInput() {
+function clearAll() {
   inputText.value = ''
   outputText.value = ''
-}
-
-function copyToClipboard() {
-  if (outputText.value) {
-    navigator.clipboard.writeText(outputText.value).then(() => {
-      showCopySuccess.value = true
-      setTimeout(() => {
-        showCopySuccess.value = false
-      }, 2000)
-    }).catch(err => {
-      console.error('复制失败:', err)
-    })
-  }
 }
 
 function exchange() {
   inputText.value = outputText.value
   outputText.value = ''
 }
+
+function copyToClipboard() {
+  if (!outputText.value) return
+
+  navigator.clipboard.writeText(outputText.value).then(() => {
+    showCopySuccess.value = true
+    window.setTimeout(() => {
+      showCopySuccess.value = false
+    }, 1800)
+  }).catch((error) => {
+    console.error('复制失败:', error)
+  })
+}
 </script>
 
 <template>
-  <div class="urlencode-container">
-    <div class="main-content">
-      <div class="input-section">
-        <div class="section-header">
-          <h3>输入文本</h3>
+  <div class="tool-page">
+    <section class="tool-page__hero">
+      <div>
+        <p class="page-kicker">文本处理 / URL 编解码</p>
+        <h1 class="page-title">URL 安全字符串转换</h1>
+        <p class="page-subtitle">把输入、结果和模式切换压进一条连续的工作流里，适合快速处理回调地址、查询参数和签名内容。</p>
+      </div>
+      <div class="tool-page__hero-actions">
+        <button class="ghost-action" type="button" @click="copyToClipboard">复制结果</button>
+      </div>
+    </section>
+
+    <section class="workspace-card">
+      <div class="url-grid">
+        <article class="editor-pane">
+          <div class="editor-pane__header">
+            <div>
+              <span class="editor-pane__eyebrow">输入</span>
+              <strong>原始文本</strong>
+            </div>
+            <span class="meta-pill">{{ mode === 'encode' ? '原文' : '已编码' }}</span>
+          </div>
+          <textarea
+            v-model="inputText"
+            class="workspace-textarea"
+            placeholder="请在此输入 URL 或任意文本……"
+          ></textarea>
+        </article>
+
+        <article class="editor-pane">
+          <div class="editor-pane__header">
+            <div>
+              <span class="editor-pane__eyebrow">输出</span>
+              <strong>处理结果</strong>
+            </div>
+            <button class="ghost-action editor-pane__copy" type="button" @click="copyToClipboard">复制</button>
+          </div>
+          <div class="output-view">
+            <span v-if="outputText">{{ outputText }}</span>
+            <span v-else class="output-view__placeholder">转换结果会显示在这里……</span>
+          </div>
+        </article>
+      </div>
+
+      <div class="negative-divider"></div>
+
+      <div class="url-toolbar">
+        <div class="toolbar-group">
+          <span class="toolbar-label">转换模式</span>
+          <div class="toggle-pills">
+            <button
+              class="toggle-pill"
+              :class="{ 'toggle-pill--active': mode === 'encode' }"
+              type="button"
+              @click="mode = 'encode'"
+            >
+              地址编码
+            </button>
+            <button
+              class="toggle-pill"
+              :class="{ 'toggle-pill--active': mode === 'decode' }"
+              type="button"
+              @click="mode = 'decode'"
+            >
+              地址解码
+            </button>
+          </div>
         </div>
-        <textarea
-          v-model="inputText"
-          class="text-input"
-          placeholder="请输入需要编码或解码的文本..."
-        ></textarea>
-        <div class="button-group">
-          <button
-            class="action-button primary-button"
-            @click="encode"
-            :disabled="!inputText.trim()"
-          >
-            编码
-          </button>
-          <button
-            class="action-button primary-button"
-            @click="decode"
-            :disabled="!inputText.trim()"
-          >
-            解码
-          </button>
-          <button
-            class="action-button"
-            @click="clearInput"
-          >
-            清空
+
+        <div class="toolbar-actions">
+          <button class="ghost-action" type="button" @click="exchange">交换内容</button>
+          <button class="ghost-action" type="button" @click="clearAll">清空</button>
+          <button class="primary-action" type="button" @click="transform">
+            <AppIcon name="sparkles" :size="15" />
+            <span>{{ mode === 'encode' ? 'URL 编码' : 'URL 解码' }}</span>
           </button>
         </div>
       </div>
 
-      <div class="output-section">
-        <div class="section-header">
-          <h3>输出结果</h3>
-          <div class="header-buttons">
-            <button
-              class="copy-button"
-              @click="exchange"
-              :disabled="!outputText"
-            >
-              交换
-            </button>
-            <button
-              class="copy-button"
-              @click="copyToClipboard"
-              :disabled="!outputText"
-            >
-              复制
-            </button>
-          </div>
-        </div>
-        <div class="output-content">
-          <div v-if="outputText" class="urlencode-output">
-            {{ outputText }}
-          </div>
-          <div v-else class="empty-output">
-            请在左侧输入内容并点击编码或解码
-          </div>
-        </div>
-        <div v-if="showCopySuccess" class="copy-success">
-          复制成功！
-        </div>
+      <div class="stats-grid">
+        <article v-for="item in stats" :key="item.label" class="stat-card">
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+        </article>
       </div>
-    </div>
+
+      <div v-if="showCopySuccess" class="floating-toast">结果已复制</div>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.urlencode-container {
+.tool-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+  gap: 1.25rem;
 }
 
-.main-content {
+.tool-page__hero {
   display: flex;
-  flex: 1;
-  gap: 20px;
-  overflow: hidden;
-  min-height: 0;
-  align-items: center;
-}
-
-.input-section,
-.output-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  min-height: 0;
-  height: 70%;
-}
-
-.input-section {
-  margin-left: 20px;
-}
-
-.output-section {
-  margin-right: 20px;
-}
-
-.section-header {
-  display: flex;
+  align-items: start;
   justify-content: space-between;
+  gap: 1rem;
+}
+
+.url-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.editor-pane {
+  overflow: hidden;
+  border-radius: 1.1rem;
+  background: rgba(6, 14, 32, 0.64);
+  border: 1px solid rgba(144, 143, 160, 0.08);
+}
+
+.editor-pane__header {
+  padding: 1rem 1rem 0.85rem;
+  display: flex;
   align-items: center;
-  padding: 12px 16px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
-  height: 48px;
-  box-sizing: border-box;
-  flex-shrink: 0;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
-.section-header h3 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
+.editor-pane__eyebrow {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--color-text-faint);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.header-buttons {
-  display: flex;
-  gap: 8px;
+.editor-pane__copy {
+  padding: 0.58rem 0.9rem;
 }
 
-.text-input {
-  flex: 1;
-  width: 100%;
-  padding: 16px;
-  border: none;
-  resize: none;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  background-color: #fafafa;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.text-input:focus {
-  outline: none;
-  background-color: #fff;
-}
-
-.text-input::placeholder {
-  color: #999;
-}
-
-.button-group {
-  display: flex;
-  gap: 12px;
-  padding: 12px 16px;
-  background-color: #f5f5f5;
-  border-top: 1px solid #e0e0e0;
-  flex-shrink: 0;
-}
-
-.action-button {
-  flex: 1;
-  padding: 8px 20px;
-  font-size: 14px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background-color: #fff;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.action-button:hover:not(:disabled) {
-  border-color: #1890ff;
-  color: #1890ff;
-}
-
-.action-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.primary-button {
-  background-color: #1890ff;
-  border-color: #1890ff;
-  color: #fff;
-}
-
-.primary-button:hover:not(:disabled) {
-  background-color: #40a9ff;
-  border-color: #40a9ff;
-  color: #fff;
-}
-
-.copy-button {
-  padding: 4px 12px;
-  font-size: 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background-color: #fff;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.copy-button:hover:not(:disabled) {
-  border-color: #1890ff;
-  color: #1890ff;
-}
-
-.copy-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.output-content {
-  flex: 1;
-  padding: 16px;
-  background-color: #fafafa;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.urlencode-output {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 14px;
-  line-height: 1.6;
+.output-view {
+  min-height: 280px;
+  padding: 1.2rem;
+  font-family: var(--font-mono);
+  line-height: 1.7;
+  background: rgba(6, 14, 32, 0.9);
   word-break: break-all;
-  color: #333;
-  background-color: #fff;
-  padding: 12px;
-  border-radius: 4px;
-  border: 1px solid #e0e0e0;
   white-space: pre-wrap;
 }
 
-.empty-output {
+.output-view__placeholder {
+  color: var(--color-text-faint);
+}
+
+.url-toolbar {
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  height: 100%;
-  color: #999;
-  font-style: italic;
-  padding-top: 16px;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
-.output-section {
-  position: relative;
+.toolbar-group {
+  display: grid;
+  gap: 0.65rem;
 }
 
-.copy-success {
-  position: absolute;
-  top: 60px;
-  right: 16px;
-  padding: 6px 12px;
-  background-color: #52c41a;
-  color: white;
-  font-size: 12px;
-  border-radius: 4px;
-  animation: fadeInOut 2s ease-in-out;
-  z-index: 10;
+.toolbar-label {
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  color: var(--color-text-faint);
+  text-transform: uppercase;
 }
 
-@keyframes fadeInOut {
-  0% { opacity: 0; transform: translateY(-10px); }
-  20% { opacity: 1; transform: translateY(0); }
-  80% { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-10px); }
+.toggle-pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
 }
 
-@media (max-width: 768px) {
-  .main-content {
+.toggle-pill {
+  border: 0;
+  border-radius: 0.9rem;
+  padding: 0.72rem 1rem;
+  background: rgba(45, 52, 73, 0.48);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.toggle-pill--active {
+  background: rgba(255, 183, 131, 0.18);
+  color: var(--color-tertiary);
+}
+
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.stat-card {
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  background: rgba(23, 31, 51, 0.78);
+  border: 1px solid rgba(144, 143, 160, 0.1);
+  display: grid;
+  gap: 0.35rem;
+}
+
+.stat-card span {
+  font-size: 0.74rem;
+  color: var(--color-text-faint);
+}
+
+.stat-card strong {
+  font-size: 1rem;
+}
+
+@media (max-width: 960px) {
+  .url-grid,
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .tool-page__hero {
     flex-direction: column;
-  }
-
-  .input-section,
-  .output-section {
-    min-height: 200px;
-  }
-
-  .button-group {
-    flex-wrap: wrap;
-  }
-
-  .action-button {
-    flex: 1;
-    min-width: 100px;
+    align-items: stretch;
   }
 }
 </style>

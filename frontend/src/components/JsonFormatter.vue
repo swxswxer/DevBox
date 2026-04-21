@@ -1,77 +1,62 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { computed, ref, watch } from 'vue'
 import hljs from 'highlight.js/lib/core'
 import json from 'highlight.js/lib/languages/json'
-import 'highlight.js/styles/github.css'
-import { XMLParser, XMLBuilder } from 'fast-xml-parser'
+import 'highlight.js/styles/github-dark.css'
+import { XMLBuilder, XMLParser } from 'fast-xml-parser'
+import AppIcon from './AppIcon.vue'
 
-// 注册JSON语言
 hljs.registerLanguage('json', json)
 
-// 响应式数据
 const inputJson = ref('')
 const outputContent = ref('')
 const errorMessage = ref('')
 const isMinified = ref(false)
 const showCopySuccess = ref(false)
-const inputType = ref('unknown') // json/xml/unknown
-const isSortEnabled = ref(false) // 是否启用ASCII排序
+const inputType = ref('unknown')
+const isSortEnabled = ref(false)
 
-// 计算属性：处理后的输出内容
+const statusItems = computed(() => [
+  { label: '输入类型', value: inputType.value.toUpperCase() || 'UNKNOWN' },
+  { label: '行数', value: `${processedOutput.value ? processedOutput.value.split('\n').length : 0}` },
+  { label: '字节数', value: `${processedOutput.value.length}` }
+])
+
 const processedOutput = computed(() => {
   if (errorMessage.value) return ''
-  
+
   if (isJson(outputContent.value)) {
-    // 是JSON格式
-    if (isMinified.value) {
-      // 压缩模式
-      const parsed = JSON.parse(outputContent.value)
-      return JSON.stringify(parsed)
-    } else {
-      // 格式化模式
-      return outputContent.value
-    }
-  } else {
-    // 不是JSON格式，视为XML
-    return outputContent.value
+    const parsed = JSON.parse(outputContent.value)
+    return isMinified.value ? JSON.stringify(parsed) : JSON.stringify(parsed, null, 2)
   }
+
+  return outputContent.value
 })
 
-// 递归排序对象键（ASCII顺序）
-function sortObjectKeys(obj) {
-  if (typeof obj !== 'object' || obj === null) {
-    return obj
-  }
-  
-  if (Array.isArray(obj)) {
-    return obj.map(item => sortObjectKeys(item))
-  }
-  
-  const sortedKeys = Object.keys(obj).sort()
-  const sortedObj = {}
-  for (const key of sortedKeys) {
-    sortedObj[key] = sortObjectKeys(obj[key])
-  }
-  return sortedObj
-}
-
-// 监听输入变化，实时处理
-watch(inputJson, (newValue) => {
-  processInput(newValue)
+watch(inputJson, (value) => {
+  processInput(value)
 })
 
-// 监听排序开关变化
 watch(isSortEnabled, () => {
   if (inputJson.value.trim()) {
     processInput(inputJson.value)
   }
 })
 
-// 检测输入类型
+function sortObjectKeys(obj) {
+  if (typeof obj !== 'object' || obj === null) return obj
+  if (Array.isArray(obj)) return obj.map((item) => sortObjectKeys(item))
+
+  const sorted = {}
+  Object.keys(obj).sort().forEach((key) => {
+    sorted[key] = sortObjectKeys(obj[key])
+  })
+  return sorted
+}
+
 function detectInputType(input) {
   if (!input.trim()) return 'unknown'
-  
-  // 尝试检测XML
+
   const trimmed = input.trim()
   if (trimmed.startsWith('<') && trimmed.endsWith('>')) {
     try {
@@ -79,34 +64,29 @@ function detectInputType(input) {
       parser.parse(input)
       return 'xml'
     } catch {
-      // 不是有效的XML
+      // ignore
     }
   }
-  
-  // 尝试检测JSON
+
   try {
     JSON.parse(input)
     return 'json'
   } catch {
-    // 不是有效的JSON
+    return 'unknown'
   }
-  
-  return 'unknown'
 }
 
-// 处理输入
 function processInput(input) {
   errorMessage.value = ''
-  
+
   if (!input.trim()) {
     outputContent.value = ''
     inputType.value = 'unknown'
     return
   }
-  
-  // 检测输入类型
+
   inputType.value = detectInputType(input)
-  
+
   try {
     if (inputType.value === 'xml') {
       const parser = new XMLParser({ ignoreAttributes: false, parseTagValue: false })
@@ -117,106 +97,82 @@ function processInput(input) {
         result = sortObjectKeys(result)
       }
       outputContent.value = JSON.stringify(result, null, 2)
-    } else if (inputType.value === 'json') {
-      let parsed = JSON.parse(input)
-      if (isSortEnabled.value) {
-        parsed = sortObjectKeys(parsed)
-      }
-      outputContent.value = JSON.stringify(parsed, null, 2)
-    } else {
-      try {
-        let parsed = JSON.parse(input)
-        if (isSortEnabled.value) {
-          parsed = sortObjectKeys(parsed)
-        }
-        outputContent.value = JSON.stringify(parsed, null, 2)
-      } catch {
-        errorMessage.value = '输入格式错误'
-        outputContent.value = ''
-      }
+      return
     }
+
+    let parsed = JSON.parse(input)
+    if (isSortEnabled.value) {
+      parsed = sortObjectKeys(parsed)
+    }
+    outputContent.value = JSON.stringify(parsed, null, 2)
   } catch (error) {
-    errorMessage.value = error.message
+    errorMessage.value = error.message || '输入格式错误'
     outputContent.value = ''
   }
 }
 
-// 切换压缩/格式化
 function toggleMinify() {
   isMinified.value = !isMinified.value
-  if (!errorMessage.value && inputJson.value.trim()) {
-    processInput(inputJson.value)
-  }
 }
 
-// 切换JSON/XML格式
 function toggleFormat() {
-  isMinified.value = false // 切换格式时重置压缩状态
-  
+  isMinified.value = false
+  errorMessage.value = ''
+
   try {
     if (isJson(outputContent.value)) {
-      // 是JSON格式，转换为XML
       if (inputType.value === 'json') {
-        // JSON转XML
         const parsed = JSON.parse(inputJson.value)
         const builder = new XMLBuilder({ format: true, ignoreAttributes: false })
         outputContent.value = builder.build({ root: parsed })
-      } else if (inputType.value === 'xml') {
-        // XML转XML
+      } else {
         const parser = new XMLParser({ ignoreAttributes: false })
         const jsonObj = parser.parse(inputJson.value)
         const builder = new XMLBuilder({ format: true, ignoreAttributes: false })
         outputContent.value = builder.build(jsonObj)
       }
-    } else {
-      // 不是JSON格式，视为XML，转换为JSON
-      if (inputType.value === 'json') {
-        // JSON转JSON
-        const parsed = JSON.parse(inputJson.value)
-        outputContent.value = JSON.stringify(parsed, null, 2)
-      } else if (inputType.value === 'xml') {
-        // XML转JSON
-        const parser = new XMLParser({ ignoreAttributes: false })
-        const jsonObj = parser.parse(inputJson.value)
-        // 移除根节点，直接返回根节点内部的内容
-        const keys = Object.keys(jsonObj)
-        if (keys.length === 1) {
-          outputContent.value = JSON.stringify(jsonObj[keys[0]], null, 2)
-        } else {
-          outputContent.value = JSON.stringify(jsonObj, null, 2)
-        }
-      }
+      return
     }
+
+    if (inputType.value === 'xml') {
+      const parser = new XMLParser({ ignoreAttributes: false })
+      const jsonObj = parser.parse(inputJson.value)
+      const keys = Object.keys(jsonObj)
+      outputContent.value = JSON.stringify(keys.length === 1 ? jsonObj[keys[0]] : jsonObj, null, 2)
+      return
+    }
+
+    const parsed = JSON.parse(inputJson.value)
+    outputContent.value = JSON.stringify(parsed, null, 2)
   } catch (error) {
-    errorMessage.value = error.message
+    errorMessage.value = error.message || '格式转换失败'
     outputContent.value = ''
   }
 }
 
-// 清空所有内容
 function clearAll() {
   inputJson.value = ''
   outputContent.value = ''
   errorMessage.value = ''
+  inputType.value = 'unknown'
 }
 
-// 复制到剪贴板
 function copyToClipboard() {
-  if (processedOutput.value) {
-    navigator.clipboard.writeText(processedOutput.value).then(() => {
-      showCopySuccess.value = true
-      setTimeout(() => {
-        showCopySuccess.value = false
-      }, 2000)
-    }).catch(err => {
-      console.error('复制失败:', err)
-    })
-  }
+  if (!processedOutput.value) return
+
+  navigator.clipboard.writeText(processedOutput.value).then(() => {
+    showCopySuccess.value = true
+    window.setTimeout(() => {
+      showCopySuccess.value = false
+    }, 1800)
+  }).catch((error) => {
+    console.error('复制失败:', error)
+  })
 }
 
-// 判断是否为JSON格式
 function isJson(code) {
   if (!code) return false
+
   try {
     JSON.parse(code)
     return true
@@ -225,345 +181,240 @@ function isJson(code) {
   }
 }
 
-// 高亮处理
 function highlightCode(code) {
-  if (!code) return ''
-  if (isJson(code)) {
-    // 是JSON格式，使用JSON高亮
-    return hljs.highlight(code, { language: 'json' }).value
-  } else {
-    // 不是JSON格式，视为XML，返回原始内容
-    return code
-  }
+  if (!code || !isJson(code)) return code
+  return hljs.highlight(code, { language: 'json' }).value
 }
-
-// 初始化
-onMounted(() => {
-  // 示例JSON
-  inputJson.value = ``
-})
 </script>
 
 <template>
-  <div class="json-formatter-container">
-    <!-- 主要内容区 -->
-    <div class="main-content">
-      <!-- 左侧输入区 -->
-      <div class="input-section">
-        <div class="section-header">
-          <h3>JSON/XML 输入</h3>
-        </div>
-        <textarea
-          v-model="inputJson"
-          class="json-input"
-          placeholder="请输入 JSON 或 XML 内容..."
-          :class="{ 'has-error': errorMessage }"
-        ></textarea>
-        <div v-if="errorMessage" class="error-message">
-          {{ errorMessage }}
-        </div>
+  <div class="tool-page">
+    <section class="tool-page__hero">
+      <div>
+        <p class="page-kicker">数据处理 / JSON 格式化</p>
+        <h1 class="page-title">JSON 工作台</h1>
+        <p class="page-subtitle">把格式化、压缩、排序和 XML 转换合并进同一画布里，让输入和结果始终保持并排可见。</p>
       </div>
-      
-      <!-- 右侧输出区 -->
-      <div class="output-section">
-        <div class="section-header">
-          <h3>格式化输出</h3>
+      <div class="tool-page__hero-actions">
+        <span class="page-chip">实时模式</span>
+        <button class="icon-button" type="button" @click="copyToClipboard">
+          <AppIcon name="copy" :size="16" />
+        </button>
+      </div>
+    </section>
+
+    <section class="workspace-card">
+      <div class="workspace-card__header">
+        <div>
+          <h2>操作带</h2>
+          <p>按 Stitch 原型重构为工作台式控制条，弱化表单感。</p>
+        </div>
+        <div class="json-actions">
+          <button class="ghost-action" type="button" @click="clearAll">清空</button>
+          <button class="ghost-action" type="button" @click="toggleMinify">
+            {{ isMinified ? '格式化' : '压缩' }}
+          </button>
           <button
-              class="copy-button"
-              @click="copyToClipboard"
-              :disabled="!processedOutput"
+            class="ghost-action"
+            :class="{ 'json-actions__button--active': isSortEnabled }"
+            type="button"
+            @click="isSortEnabled = !isSortEnabled"
           >
-            复制
+            {{ isSortEnabled ? '排序已开' : 'ASCII 排序' }}
           </button>
-        </div>
-        <div class="json-output">
-          <pre v-if="processedOutput"><code v-if="isJson(processedOutput)" v-html="highlightCode(processedOutput)"></code><code v-else>{{ processedOutput }}</code></pre>
-          <div v-else class="empty-output">
-            {{ errorMessage ? '输入格式错误' : '请在左侧输入内容' }}
-          </div>
-        </div>
-        <div v-if="showCopySuccess" class="copy-success">
-          复制成功！
+          <button class="ghost-action" type="button" @click="toggleFormat">转 JSON / XML</button>
+          <button class="primary-action" type="button" @click="processInput(inputJson)">
+            <AppIcon name="sparkles" :size="15" />
+            <span>格式化 JSON</span>
+          </button>
         </div>
       </div>
-    </div>
-    
-    <!-- 底部按钮区 -->
-    <div class="button-section">
-      <button 
-        class="action-button"
-        @click="toggleMinify"
-        :disabled="errorMessage || !inputJson.trim()"
-      >
-        {{ isMinified ? '格式化' : '压缩' }}
-      </button>
-      <button 
-            class="action-button"
-            @click="toggleFormat"
-            :disabled="errorMessage || !inputJson.trim()"
-          >
-            转json/xml
-          </button>
-      <button 
-        class="action-button"
-        :class="{ 'active': isSortEnabled }"
-        @click="isSortEnabled = !isSortEnabled"
-        :disabled="errorMessage || !inputJson.trim()"
-      >
-        {{ isSortEnabled ? '排序: 开' : '排序: 关' }}
-      </button>
-      <button 
-        class="action-button clear-button"
-        @click="clearAll"
-      >
-        清空
-      </button>
-    </div>
+
+      <div class="json-workbench">
+        <article class="editor-pane">
+          <div class="editor-pane__header">
+            <div>
+              <span class="editor-pane__eyebrow">输入</span>
+              <strong>源内容</strong>
+            </div>
+            <span class="meta-pill">{{ inputType === 'unknown' ? '等待识别' : inputType.toUpperCase() }}</span>
+          </div>
+          <textarea
+            v-model="inputJson"
+            class="workspace-textarea editor-pane__textarea"
+            :class="{ 'editor-pane__textarea--error': errorMessage }"
+            placeholder="请输入 JSON 或 XML 内容……"
+          ></textarea>
+          <div v-if="errorMessage" class="editor-error">{{ errorMessage }}</div>
+        </article>
+
+        <article class="editor-pane">
+          <div class="editor-pane__header">
+            <div>
+              <span class="editor-pane__eyebrow">输出</span>
+              <strong>格式化结果</strong>
+            </div>
+            <button class="ghost-action editor-pane__copy" type="button" @click="copyToClipboard">复制</button>
+          </div>
+          <div class="code-view">
+            <pre v-if="processedOutput"><code v-if="isJson(processedOutput)" v-html="highlightCode(processedOutput)"></code><code v-else>{{ processedOutput }}</code></pre>
+            <div v-else class="code-view__placeholder">{{ errorMessage ? '当前输入存在错误。' : '结果会显示在这里。' }}</div>
+          </div>
+        </article>
+      </div>
+
+      <div class="status-row">
+        <span v-for="item in statusItems" :key="item.label">{{ item.label }}: {{ item.value }}</span>
+      </div>
+
+      <div v-if="showCopySuccess" class="floating-toast">格式化结果已复制</div>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.json-formatter-container {
+.tool-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+  gap: 1.25rem;
 }
 
-.main-content {
+.tool-page__hero {
   display: flex;
-  flex: 1;
-  gap: 20px;
-  overflow: hidden;
-  min-height: 0;
-}
-
-.input-section,
-.output-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  min-height: 0;
-}
-
-.section-header {
-  display: flex;
+  align-items: start;
   justify-content: space-between;
+  gap: 1rem;
+}
+
+.tool-page__hero-actions {
+  display: flex;
   align-items: center;
-  padding: 12px 16px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
-  height: 48px;
-  box-sizing: border-box;
-  flex-shrink: 0;
+  gap: 0.7rem;
 }
 
-.section-header h3 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
+.json-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.7rem;
 }
 
-.copy-button {
-  padding: 4px 12px;
-  font-size: 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background-color: #fff;
-  cursor: pointer;
-  transition: all 0.3s;
+.json-actions__button--active {
+  background: rgba(128, 131, 255, 0.15);
 }
 
-.copy-button:hover:not(:disabled) {
-  border-color: #1890ff;
-  color: #1890ff;
+.json-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
 }
 
-.copy-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.editor-pane {
+  min-width: 0;
+  border-radius: 1.1rem;
+  background: rgba(6, 14, 32, 0.6);
+  overflow: hidden;
+  border: 1px solid rgba(144, 143, 160, 0.08);
 }
 
-.json-input {
-  flex: 1;
-  width: 100%;
-  padding: 16px;
-  border: none;
-  resize: none;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  background-color: #fafafa;
-  overflow-y: auto;
-  min-height: 0;
+.editor-pane__header {
+  padding: 1rem 1rem 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
-.json-input:focus {
-  outline: none;
-  background-color: #fff;
+.editor-pane__eyebrow {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--color-text-faint);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.json-input.has-error {
-  border-left: 3px solid #ff4d4f;
+.editor-pane__textarea {
+  min-height: 420px;
+  border-radius: 0;
+  box-shadow: inset 0 -2px 0 rgba(144, 143, 160, 0.2);
+  border-top: 1px solid rgba(144, 143, 160, 0.04);
 }
 
-.error-message {
-  padding: 8px 16px;
-  background-color: #fff1f0;
-  color: #ff4d4f;
-  font-size: 12px;
-  border-top: 1px solid #ffccc7;
-  flex-shrink: 0;
+.editor-pane__textarea--error {
+  box-shadow: inset 0 -2px 0 rgba(255, 180, 171, 0.9);
 }
 
-.json-output {
-  flex: 1;
-  padding: 16px;
-  background-color: #fafafa;
-  overflow-y: auto;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  text-align: left;
-  min-height: 0;
+.editor-error {
+  padding: 0.9rem 1rem 1rem;
+  color: #ffb4ab;
+  font-size: 0.84rem;
 }
 
-.json-output pre {
+.editor-pane__copy {
+  padding: 0.58rem 0.9rem;
+}
+
+.code-view {
+  min-height: 420px;
+  padding: 1.15rem;
+  font-family: var(--font-mono);
+  background: rgba(6, 14, 32, 0.92);
+  overflow: auto;
+}
+
+.code-view pre {
   margin: 0;
   white-space: pre-wrap;
-  word-wrap: break-word;
-  text-align: left;
+  word-break: break-word;
 }
 
-
-
-/* 自定义 JSON 高亮样式 */
-:deep(.json-output code) {
-  color: #333 !important;
-}
-:deep(.json-output code .hljs-string) {
-  color: #3ab54a !important;
-}
-:deep(.json-output code .hljs-number) {
-  color: #25aae2 !important;
-}
-:deep(.json-output code .hljs-literal) {
-  color: #d73a49 !important;
-}
-:deep(.json-output code .hljs-keyword) {
-  color: #d73a49 !important;
-}
-:deep(.json-output code .hljs-attr) {
-  color: #92278f !important;
-}
-:deep(.json-output code .hljs-punctuation) {
-  color: #333 !important;
+.code-view :deep(code) {
+  color: var(--color-text);
+  font-family: var(--font-mono);
 }
 
-.empty-output {
+.code-view :deep(.hljs-string) {
+  color: #86efac;
+}
+
+.code-view :deep(.hljs-number) {
+  color: #7dd3fc;
+}
+
+.code-view :deep(.hljs-attr),
+.code-view :deep(.hljs-keyword),
+.code-view :deep(.hljs-literal) {
+  color: #f9a8d4;
+}
+
+.code-view__placeholder {
+  color: var(--color-text-faint);
+}
+
+.status-row {
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  height: 100%;
-  color: #999;
-  font-style: italic;
-  padding-top: 16px;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.78rem;
+  color: var(--color-text-faint);
 }
 
-.copy-success {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  padding: 6px 12px;
-  background-color: #52c41a;
-  color: white;
-  font-size: 12px;
-  border-radius: 4px;
-  animation: fadeInOut 2s ease-in-out;
+@media (max-width: 960px) {
+  .json-workbench {
+    grid-template-columns: 1fr;
+  }
 }
 
-@keyframes fadeInOut {
-  0% { opacity: 0; transform: translateY(-10px); }
-  20% { opacity: 1; transform: translateY(0); }
-  80% { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-10px); }
-}
-
-.button-section {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  padding: 16px;
-  background-color: #f5f5f5;
-  border-top: 1px solid #e0e0e0;
-  border-radius: 0 0 8px 8px;
-  flex-shrink: 0;
-}
-
-.action-button {
-  padding: 8px 20px;
-  font-size: 14px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background-color: #fff;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.action-button:hover:not(:disabled) {
-  border-color: #1890ff;
-  color: #1890ff;
-}
-
-.action-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.action-button.active {
-  background-color: #1890ff;
-  color: white;
-  border-color: #1890ff;
-}
-
-.action-button.active:hover:not(:disabled) {
-  background-color: #40a9ff;
-  border-color: #40a9ff;
-  color: white;
-}
-
-.clear-button {
-  background-color: #fafafa;
-}
-
-.clear-button:hover {
-  background-color: #f0f0f0;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .main-content {
+@media (max-width: 720px) {
+  .tool-page__hero,
+  .workspace-card__header {
     flex-direction: column;
+    align-items: stretch;
   }
-  
-  .input-section,
-  .output-section {
-    min-height: 200px;
-  }
-  
-  .button-section {
-    flex-wrap: wrap;
-  }
-  
-  .action-button {
-    flex: 1;
-    min-width: 120px;
+
+  .json-actions {
+    justify-content: flex-start;
   }
 }
 </style>

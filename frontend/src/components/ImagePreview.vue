@@ -1,269 +1,363 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
+import AppIcon from './AppIcon.vue'
 
 const imagePath = ref('')
+const previewMeta = ref({
+  width: 0,
+  height: 0,
+  status: '等待输入路径',
+  format: 'WEBP'
+})
+
+const palette = ['#d8d6ff', '#9b9cff', '#31394d', '#f5f7ff']
 
 const imageUrl = computed(() => {
   if (!imagePath.value.trim()) return ''
-  const path = imagePath.value.startsWith('/') ? imagePath.value.slice(1) : imagePath.value
-  return `https://pic.leshuazf.com/${path}`
+  const normalizedPath = imagePath.value.startsWith('/') ? imagePath.value.slice(1) : imagePath.value
+  return `https://pic.leshuazf.com/${normalizedPath}`
 })
+
+const infoList = computed(() => [
+  { label: '尺寸', value: previewMeta.value.width && previewMeta.value.height ? `${previewMeta.value.width} × ${previewMeta.value.height}` : '--' },
+  { label: '状态', value: previewMeta.value.status },
+  { label: '文件格式', value: previewMeta.value.format },
+  { label: '来源', value: 'Leshua CDN' }
+])
 
 function clearInput() {
   imagePath.value = ''
+  previewMeta.value = {
+    width: 0,
+    height: 0,
+    status: '等待输入路径',
+    format: 'WEBP'
+  }
 }
 
 function copyUrl() {
-  if (imageUrl.value) {
-    navigator.clipboard.writeText(imageUrl.value)
+  if (!imageUrl.value) return
+  navigator.clipboard.writeText(imageUrl.value).catch((error) => {
+    console.error('复制失败:', error)
+  })
+}
+
+function handleLoad(event) {
+  const image = event.target
+  const extension = imageUrl.value.split('.').pop()?.split('?')[0]
+
+  previewMeta.value = {
+    width: image.naturalWidth,
+    height: image.naturalHeight,
+    status: '预览已加载',
+    format: extension ? extension.toUpperCase() : 'WEBP'
+  }
+}
+
+function handleError() {
+  previewMeta.value = {
+    width: 0,
+    height: 0,
+    status: '图片加载失败',
+    format: '--'
   }
 }
 </script>
 
 <template>
-  <div class="image-preview-container">
-    <div class="input-section">
-      <div class="section-header">
-        <h3>图片路径</h3>
-        <div class="header-actions">
-          <button
-            class="copy-btn"
-            @click="copyUrl"
-            :disabled="!imagePath"
-          >
-            复制链接
-          </button>
-          <button
-            class="clear-btn"
-            @click="clearInput"
-            :disabled="!imagePath"
-          >
-            清空
-          </button>
-        </div>
+  <div class="tool-page">
+    <section class="tool-page__hero">
+      <div>
+        <p class="page-kicker">媒体工具 / 图片预览器</p>
+        <h1 class="page-title">图片预览器</h1>
+        <p class="page-subtitle">保留原有固定域名逻辑，但把输入、预览和素材信息整理成更像媒体工作台的布局。</p>
       </div>
-      <div class="input-wrapper">
-        <span class="url-prefix">https://pic.leshuazf.com/</span>
-        <input
-          v-model="imagePath"
-          class="path-input"
-          placeholder="请输入图片路径，如：picture3pro/M00/7E/7C/xxx.jpg"
-        />
-      </div>
-    </div>
+    </section>
 
-    <div class="preview-section">
-      <div class="section-header">
-        <h3>图片预览</h3>
-      </div>
-      <div class="preview-content">
-        <div v-if="!imagePath" class="empty-placeholder">
-          <span class="placeholder-icon">🖼️</span>
-          <span class="placeholder-text">请输入图片路径进行预览</span>
+    <section class="workspace-card">
+      <div class="image-input-row">
+        <div class="workspace-input-wrap">
+          <span class="image-input-prefix">https://pic.leshuazf.com/</span>
+          <input
+            v-model="imagePath"
+            class="workspace-input image-input"
+            placeholder="请输入图片路径，如 picture3pro/M00/7E/7C/demo.webp"
+          />
         </div>
-        <div v-else class="image-wrapper">
-          <el-image
-            :src="imageUrl"
-            alt="预览图片"
-            class="preview-image"
-            fit="contain"
-            :preview-src-list="[imageUrl]"
-            :initial-index="0"
-            preview-teleported
-          >
-            <template #error>
-              <div class="image-error">
-                <span>图片加载失败</span>
-              </div>
-            </template>
-          </el-image>
+        <button class="ghost-action" type="button" @click="clearInput">清空</button>
+        <button class="primary-action" type="button" @click="copyUrl">
+          <AppIcon name="copy" :size="15" />
+          <span>复制链接</span>
+        </button>
+      </div>
+
+      <div class="image-grid">
+        <article class="preview-card">
+          <div class="preview-card__header">
+            <h2>即时预览</h2>
+            <span class="meta-pill">预览面板</span>
+          </div>
+          <div class="preview-stage">
+            <div v-if="!imageUrl" class="preview-placeholder">输入路径后即可预览远程图片。</div>
+            <img
+              v-else
+              :src="imageUrl"
+              alt="预览图片"
+              class="preview-image"
+              @load="handleLoad"
+              @error="handleError"
+            />
+          </div>
+        </article>
+
+        <div class="side-stack">
+          <article class="meta-card">
+            <div class="meta-card__header">
+              <h3>资源信息</h3>
+              <span class="status-dot" :class="{ 'status-dot--error': previewMeta.status === '图片加载失败' }"></span>
+            </div>
+            <ul class="meta-list">
+              <li v-for="item in infoList" :key="item.label">
+                <span>{{ item.label }}</span>
+                <strong>{{ item.value }}</strong>
+              </li>
+            </ul>
+            <button class="ghost-action meta-card__button" type="button" @click="copyUrl">复制图片地址</button>
+          </article>
+
+          <article class="meta-card">
+            <h3>视觉记忆</h3>
+            <div class="palette-row">
+              <span v-for="color in palette" :key="color" :style="{ background: color }"></span>
+            </div>
+          </article>
         </div>
       </div>
-    </div>
+
+      <div class="insight-grid">
+        <article class="mini-info-card">
+          <div class="mini-info-card__icon">
+            <AppIcon name="image" :size="18" />
+          </div>
+          <h3>图片快检</h3>
+          <p>适合验证远程资源路径是否正确，快速确认图片是否可访问。</p>
+        </article>
+        <article class="mini-info-card">
+          <div class="mini-info-card__icon">
+            <AppIcon name="link" :size="18" />
+          </div>
+          <h3>CDN 分析</h3>
+          <p>路径保持原有业务前缀，不改变实际生成逻辑，只重构视觉结构。</p>
+        </article>
+        <article class="mini-info-card">
+          <div class="mini-info-card__icon">
+            <AppIcon name="code" :size="18" />
+          </div>
+          <h3>JSON 风格主题</h3>
+          <p>与整个新工作台保持一致，避免某个工具页再次退回白底表单风格。</p>
+        </article>
+      </div>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.image-preview-container {
+.tool-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  width: 100%;
-  position: relative;
-  overflow: hidden;
+  gap: 1.25rem;
 }
 
-.input-section {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 10px;
-  flex-shrink: 0;
+.image-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.75rem;
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 16px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
-  height: 40px;
-  box-sizing: border-box;
-  flex-shrink: 0;
-}
-
-.section-header h3 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
-}
-
-.header-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.clear-btn,
-.copy-btn {
-  padding: 4px 12px;
-  font-size: 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background-color: #fff;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.clear-btn:hover:not(:disabled) {
-  border-color: #ff4d4f;
-  color: #ff4d4f;
-}
-
-.copy-btn:hover:not(:disabled) {
-  border-color: #1890ff;
-  color: #1890ff;
-}
-
-.clear-btn:disabled,
-.copy-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.input-wrapper {
+.workspace-input-wrap {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
-  background-color: #fafafa;
+  gap: 0.7rem;
+  padding: 0 1rem;
+  border-radius: 1rem;
+  background: rgba(6, 14, 32, 0.74);
 }
 
-.url-prefix {
-  color: #666;
-  font-size: 14px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+.image-input-prefix {
   white-space: nowrap;
-  margin-right: 8px;
-  flex-shrink: 0;
+  color: var(--color-text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
 }
 
-.path-input {
-  flex: 1;
-  border: none;
+.image-input {
+  box-shadow: none;
   background: transparent;
-  font-size: 14px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  outline: none;
-  min-width: 0;
+  padding-left: 0;
 }
 
-.path-input::placeholder {
-  color: #999;
+.image-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 280px;
+  gap: 1rem;
 }
 
-.preview-section {
-  flex: 1;
+.preview-card,
+.meta-card,
+.mini-info-card {
+  border-radius: 1.15rem;
+  background: rgba(6, 14, 32, 0.66);
+  border: 1px solid rgba(144, 143, 160, 0.1);
+}
+
+.preview-card {
+  padding: 1rem;
+}
+
+.preview-card__header,
+.meta-card__header {
   display: flex;
-  flex-direction: column;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.preview-card__header h2,
+.meta-card h3 {
+  margin: 0;
+}
+
+.preview-stage {
+  margin-top: 1rem;
+  min-height: 390px;
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at top right, rgba(155, 156, 255, 0.18), transparent 26%),
+    rgba(11, 19, 38, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  min-height: 0;
 }
 
-.preview-content {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #fafafa;
-  overflow: hidden;
-  padding: 16px;
-  min-height: 0;
-}
-
-.empty-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #999;
-}
-
-.placeholder-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
-}
-
-.placeholder-text {
-  font-size: 14px;
-}
-
-.image-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
+.preview-placeholder {
+  color: var(--color-text-faint);
 }
 
 .preview-image {
+  display: block;
   max-width: 100%;
   max-height: 100%;
-  width: 100%;
-  height: 100%;
-}
-
-.preview-image :deep(.el-image__inner) {
   object-fit: contain;
 }
 
-.image-error {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  color: #999;
-  font-size: 14px;
+.side-stack {
+  display: grid;
+  gap: 1rem;
 }
 
-@media (max-width: 768px) {
-  .url-prefix {
-    font-size: 12px;
+.meta-card {
+  padding: 1rem;
+}
+
+.meta-list {
+  list-style: none;
+  margin: 1rem 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.meta-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.86rem;
+}
+
+.meta-list span {
+  color: var(--color-text-muted);
+}
+
+.meta-card__button {
+  width: 100%;
+}
+
+.status-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+  background: #34d399;
+  box-shadow: 0 0 14px rgba(52, 211, 153, 0.4);
+}
+
+.status-dot--error {
+  background: #ffb4ab;
+  box-shadow: 0 0 14px rgba(255, 180, 171, 0.4);
+}
+
+.palette-row {
+  display: flex;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.palette-row span {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.insight-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.mini-info-card {
+  padding: 1.2rem;
+}
+
+.mini-info-card__icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  background: rgba(192, 193, 255, 0.08);
+}
+
+.mini-info-card h3 {
+  margin: 1rem 0 0;
+}
+
+.mini-info-card p {
+  margin: 0.55rem 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  font-size: 0.86rem;
+}
+
+@media (max-width: 1080px) {
+  .image-grid,
+  .insight-grid {
+    grid-template-columns: 1fr;
   }
-  
-  .path-input {
-    font-size: 12px;
+}
+
+@media (max-width: 780px) {
+  .image-input-row {
+    grid-template-columns: 1fr;
   }
-  
-  .placeholder-icon {
-    font-size: 36px;
+
+  .workspace-input-wrap {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.8rem 1rem;
   }
 }
 </style>
