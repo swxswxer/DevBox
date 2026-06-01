@@ -24,7 +24,37 @@ const iconStyle = computed(() => ({
 
 <template>
   <svg
-    v-if="name === 'dashboard'"
+    v-if="name === 'data-object'"
+    :style="iconStyle"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    :stroke-width="strokeWidth"
+  >
+    <path d="M9 5H5v4" />
+    <path d="M15 5h4v4" />
+    <path d="M9 19H5v-4" />
+    <path d="M15 19h4v-4" />
+    <path d="M8 12h8" />
+    <path d="M12 8v8" />
+  </svg>
+  <svg
+    v-else-if="name === 'enhanced-encryption'"
+    :style="iconStyle"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    :stroke-width="strokeWidth"
+  >
+    <path d="M12 3l7 4v5c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V7l7-4Z" />
+    <path d="M9.5 12l1.5 1.5 3.5-3.5" />
+  </svg>
+  <svg
+    v-else-if="name === 'dashboard'"
     :style="iconStyle"
     viewBox="0 0 24 24"
     fill="none"
@@ -109,6 +139,22 @@ const iconStyle = computed(() => ({
     <path d="M21 16l-5-5-8 8" />
   </svg>
   <svg
+    v-else-if="name === 'image-search'"
+    :style="iconStyle"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    :stroke-width="strokeWidth"
+  >
+    <rect x="3" y="5" width="13" height="13" rx="2" />
+    <circle cx="8" cy="10" r="1.5" />
+    <path d="M16 16l-4-4-5 5" />
+    <path d="M18 18l3 3" />
+    <circle cx="18" cy="18" r="3" />
+  </svg>
+  <svg
     v-else-if="name === 'qr'"
     :style="iconStyle"
     viewBox="0 0 24 24"
@@ -124,6 +170,50 @@ const iconStyle = computed(() => ({
     <path d="M14 14h3v3h-3z" />
     <path d="M19 14h2v2h-2z" />
     <path d="M17 17h4v4h-4z" />
+  </svg>
+  <svg
+    v-else-if="name === 'password'"
+    :style="iconStyle"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    :stroke-width="strokeWidth"
+  >
+    <circle cx="8" cy="12" r="3" />
+    <path d="M11 12h10" />
+    <path d="M18 12v3" />
+    <path d="M15 12v2" />
+  </svg>
+  <svg
+    v-else-if="name === 'terminal'"
+    :style="iconStyle"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    :stroke-width="strokeWidth"
+  >
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M7 9l3 3-3 3" />
+    <path d="M13 15h4" />
+  </svg>
+  <svg
+    v-else-if="name === 'integration'"
+    :style="iconStyle"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    :stroke-width="strokeWidth"
+  >
+    <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <rect x="6" y="7" width="12" height="10" rx="2" />
+    <path d="M9 17v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2" />
+    <path d="M9 12h6" />
   </svg>
   <svg
     v-else-if="name === 'settings'"
@@ -167,6 +257,18 @@ const iconStyle = computed(() => ({
     <path d="M15 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3" />
     <path d="M10 17l5-5-5-5" />
     <path d="M15 12H4" />
+  </svg>
+  <svg
+    v-else-if="name === 'arrow-right'"
+    :style="iconStyle"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    :stroke-width="strokeWidth"
+  >
+    <path d="M8 6l6 6-6 6" />
   </svg>
   <svg
     v-else-if="name === 'search'"

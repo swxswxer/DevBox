@@ -165,7 +165,7 @@ function handleError() {
 .tool-page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.95rem;
 }
 
 .image-input-row {
@@ -228,8 +228,8 @@ function handleError() {
 }
 
 .preview-stage {
-  margin-top: 1rem;
-  min-height: 390px;
+  margin-top: 0.8rem;
+  min-height: 280px;
   border-radius: 1rem;
   background:
     radial-gradient(circle at top right, rgba(155, 156, 255, 0.18), transparent 26%),
@@ -313,11 +313,11 @@ function handleError() {
 .insight-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.8rem;
 }
 
 .mini-info-card {
-  padding: 1.2rem;
+  padding: 0.95rem;
 }
 
 .mini-info-card__icon {
@@ -346,6 +346,21 @@ function handleError() {
   .image-grid,
   .insight-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-height: 920px) {
+  .tool-page {
+    gap: 0.7rem;
+  }
+
+  .preview-stage {
+    min-height: 210px;
+  }
+
+  .meta-list {
+    margin: 0.75rem 0;
+    gap: 0.65rem;
   }
 }
 

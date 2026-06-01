@@ -129,7 +129,7 @@ function swapText() {
 .tool-page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.95rem;
 }
 
 .tool-page__hero {
@@ -174,7 +174,7 @@ function swapText() {
 }
 
 .diff-textarea {
-  min-height: 260px;
+  min-height: 180px;
   border-radius: 0;
 }
 
@@ -201,7 +201,7 @@ function swapText() {
 }
 
 .diff-preview__body {
-  min-height: 320px;
+  min-height: 220px;
   padding: 0.4rem;
   border-radius: 1rem;
   background: rgba(6, 14, 32, 0.88);
@@ -262,6 +262,25 @@ function swapText() {
   .diff-editors,
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-height: 920px) {
+  .tool-page {
+    gap: 0.7rem;
+  }
+
+  .diff-editors,
+  .stats-grid {
+    gap: 0.7rem;
+  }
+
+  .diff-textarea {
+    min-height: 140px;
+  }
+
+  .diff-preview__body {
+    min-height: 180px;
   }
 }
 

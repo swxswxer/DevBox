@@ -150,7 +150,7 @@ function copyToClipboard() {
 .tool-page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.95rem;
 }
 
 .tool-page__hero {
@@ -195,8 +195,8 @@ function copyToClipboard() {
 }
 
 .output-view {
-  min-height: 280px;
-  padding: 1.2rem;
+  min-height: 190px;
+  padding: 0.95rem;
   font-family: var(--font-mono);
   line-height: 1.7;
   background: rgba(6, 14, 32, 0.9);
@@ -282,6 +282,21 @@ function copyToClipboard() {
   .url-grid,
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-height: 920px) {
+  .tool-page {
+    gap: 0.7rem;
+  }
+
+  .url-grid,
+  .stats-grid {
+    gap: 0.7rem;
+  }
+
+  .output-view {
+    min-height: 140px;
   }
 }
 

@@ -276,14 +276,14 @@ function highlightCode(code) {
 .tool-page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.95rem;
 }
 
 .tool-page__hero {
   display: flex;
   align-items: start;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.8rem;
 }
 
 .tool-page__hero-actions {
@@ -335,7 +335,7 @@ function highlightCode(code) {
 }
 
 .editor-pane__textarea {
-  min-height: 420px;
+  min-height: 300px;
   border-radius: 0;
   box-shadow: inset 0 -2px 0 rgba(144, 143, 160, 0.2);
   border-top: 1px solid rgba(144, 143, 160, 0.04);
@@ -356,8 +356,8 @@ function highlightCode(code) {
 }
 
 .code-view {
-  min-height: 420px;
-  padding: 1.15rem;
+  min-height: 300px;
+  padding: 0.9rem;
   font-family: var(--font-mono);
   background: rgba(6, 14, 32, 0.92);
   overflow: auto;
@@ -403,6 +403,21 @@ function highlightCode(code) {
 @media (max-width: 960px) {
   .json-workbench {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-height: 920px) {
+  .tool-page {
+    gap: 0.7rem;
+  }
+
+  .editor-pane__header {
+    padding: 0.8rem 0.9rem 0.65rem;
+  }
+
+  .editor-pane__textarea,
+  .code-view {
+    min-height: 220px;
   }
 }
 

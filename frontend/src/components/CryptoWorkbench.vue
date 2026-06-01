@@ -286,7 +286,7 @@ function switchMode(mode) {
 .tool-page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.95rem;
 }
 
 .tool-page__hero {
@@ -336,7 +336,7 @@ function switchMode(mode) {
 .crypto-controls {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) 210px;
-  gap: 1rem;
+  gap: 0.8rem;
   align-items: end;
 }
 
@@ -398,7 +398,7 @@ function switchMode(mode) {
 }
 
 .result-box {
-  min-height: 160px;
+  min-height: 120px;
   border-radius: 1rem;
   background: rgba(6, 14, 32, 0.88);
   padding: 1.4rem;
@@ -426,12 +426,12 @@ function switchMode(mode) {
 .insight-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.8rem;
 }
 
 .mini-info-card {
   border-radius: 1.15rem;
-  padding: 1.2rem;
+  padding: 0.95rem;
   background: linear-gradient(180deg, rgba(23, 31, 51, 0.92), rgba(19, 27, 46, 0.98));
   border: 1px solid rgba(144, 143, 160, 0.14);
 }
@@ -463,6 +463,26 @@ function switchMode(mode) {
   .crypto-controls,
   .insight-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-height: 920px) {
+  .tool-page {
+    gap: 0.7rem;
+  }
+
+  .mode-pill {
+    padding: 0.62rem 0.9rem;
+  }
+
+  .result-box {
+    min-height: 96px;
+    padding: 1rem;
+  }
+
+  .mini-info-card p {
+    font-size: 0.8rem;
+    line-height: 1.45;
   }
 }
 </style>

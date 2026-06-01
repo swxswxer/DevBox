@@ -160,7 +160,7 @@ function downloadSvg() {
 .tool-page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.95rem;
 }
 
 .qrcode-grid {
@@ -217,7 +217,7 @@ function downloadSvg() {
 }
 
 .preview-box {
-  min-height: 320px;
+  min-height: 240px;
   border-radius: 1rem;
   background: linear-gradient(180deg, rgba(245, 247, 255, 0.94), rgba(220, 224, 255, 0.88));
   display: flex;
@@ -295,6 +295,24 @@ function downloadSvg() {
 @media (max-width: 1080px) {
   .qrcode-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-height: 920px) {
+  .tool-page {
+    gap: 0.7rem;
+  }
+
+  .preview-box {
+    min-height: 190px;
+  }
+
+  .history-list {
+    gap: 0.6rem;
+  }
+
+  .history-item {
+    padding: 0.7rem;
   }
 }
 </style>
