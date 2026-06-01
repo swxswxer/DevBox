@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onActivated, onDeactivated, onBeforeUnmount, nextTick } from 'vue'
 import hljs from 'highlight.js/lib/core'
 import json from 'highlight.js/lib/languages/json'
 import 'highlight.js/styles/github.css'
@@ -16,6 +16,11 @@ const isMinified = ref(false)
 const showCopySuccess = ref(false)
 const inputType = ref('unknown') // json/xml/unknown
 const isSortEnabled = ref(false) // 是否启用ASCII排序
+const isSearchVisible = ref(false)
+const searchQuery = ref('')
+const activeMatchIndex = ref(0)
+const searchInputRef = ref(null)
+const outputRef = ref(null)
 
 // 计算属性：处理后的输出内容
 const processedOutput = computed(() => {
@@ -35,6 +40,50 @@ const processedOutput = computed(() => {
     // 不是JSON格式，视为XML
     return outputContent.value
   }
+})
+
+const searchMatches = computed(() => {
+  if (!searchQuery.value || !processedOutput.value) return []
+
+  const query = searchQuery.value.toLowerCase()
+  const content = processedOutput.value.toLowerCase()
+  const matches = []
+  let index = content.indexOf(query)
+
+  while (index !== -1) {
+    matches.push({
+      start: index,
+      end: index + query.length
+    })
+    index = content.indexOf(query, index + query.length)
+  }
+
+  return matches
+})
+
+const highlightedSearchOutput = computed(() => {
+  if (!processedOutput.value) return ''
+  if (!searchQuery.value || searchMatches.value.length === 0) {
+    return escapeHtml(processedOutput.value)
+  }
+
+  let result = ''
+  let cursor = 0
+  searchMatches.value.forEach((match, index) => {
+    result += escapeHtml(processedOutput.value.slice(cursor, match.start))
+    const activeClass = index === activeMatchIndex.value ? ' active' : ''
+    result += `<mark class="search-match${activeClass}">${escapeHtml(processedOutput.value.slice(match.start, match.end))}</mark>`
+    cursor = match.end
+  })
+  result += escapeHtml(processedOutput.value.slice(cursor))
+
+  return result
+})
+
+const searchCounter = computed(() => {
+  if (!searchQuery.value) return '0/0'
+  if (searchMatches.value.length === 0) return '0/0'
+  return `${activeMatchIndex.value + 1}/${searchMatches.value.length}`
 })
 
 // 递归排序对象键（ASCII顺序）
@@ -65,6 +114,15 @@ watch(isSortEnabled, () => {
   if (inputJson.value.trim()) {
     processInput(inputJson.value)
   }
+})
+
+watch([searchQuery, processedOutput], () => {
+  activeMatchIndex.value = 0
+  scrollToActiveMatch()
+})
+
+watch(activeMatchIndex, () => {
+  scrollToActiveMatch()
 })
 
 // 检测输入类型
@@ -214,6 +272,70 @@ function copyToClipboard() {
   }
 }
 
+function escapeHtml(value) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
+function openSearch() {
+  isSearchVisible.value = true
+  nextTick(() => {
+    searchInputRef.value?.focus()
+    searchInputRef.value?.select()
+  })
+}
+
+function closeSearch() {
+  isSearchVisible.value = false
+  searchQuery.value = ''
+  activeMatchIndex.value = 0
+}
+
+function goToNextMatch() {
+  if (searchMatches.value.length === 0) return
+  activeMatchIndex.value = (activeMatchIndex.value + 1) % searchMatches.value.length
+}
+
+function goToPreviousMatch() {
+  if (searchMatches.value.length === 0) return
+  activeMatchIndex.value = (activeMatchIndex.value - 1 + searchMatches.value.length) % searchMatches.value.length
+}
+
+function handleSearchKeydown(event) {
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    if (event.shiftKey) {
+      goToPreviousMatch()
+    } else {
+      goToNextMatch()
+    }
+  } else if (event.key === 'Escape') {
+    event.preventDefault()
+    closeSearch()
+  }
+}
+
+function handleGlobalKeydown(event) {
+  const isFindShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f'
+  if (!isFindShortcut) return
+
+  event.preventDefault()
+  openSearch()
+}
+
+async function scrollToActiveMatch() {
+  await nextTick()
+  const activeMatch = outputRef.value?.querySelector('.search-match.active')
+  activeMatch?.scrollIntoView({
+    block: 'center',
+    inline: 'nearest'
+  })
+}
+
 // 判断是否为JSON格式
 function isJson(code) {
   if (!code) return false
@@ -242,6 +364,18 @@ onMounted(() => {
   // 示例JSON
   inputJson.value = ``
 })
+
+onActivated(() => {
+  document.addEventListener('keydown', handleGlobalKeydown)
+})
+
+onDeactivated(() => {
+  document.removeEventListener('keydown', handleGlobalKeydown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleGlobalKeydown)
+})
 </script>
 
 <template>
@@ -268,16 +402,39 @@ onMounted(() => {
       <div class="output-section">
         <div class="section-header">
           <h3>格式化输出</h3>
-          <button
+          <div class="header-actions">
+            <button
               class="copy-button"
-              @click="copyToClipboard"
+              @click="openSearch"
               :disabled="!processedOutput"
-          >
-            复制
-          </button>
+              title="Ctrl/Command + F"
+            >
+              查找
+            </button>
+            <button
+                class="copy-button"
+                @click="copyToClipboard"
+                :disabled="!processedOutput"
+            >
+              复制
+            </button>
+          </div>
         </div>
-        <div class="json-output">
-          <pre v-if="processedOutput"><code v-if="isJson(processedOutput)" v-html="highlightCode(processedOutput)"></code><code v-else>{{ processedOutput }}</code></pre>
+        <div v-if="isSearchVisible" class="search-bar">
+          <input
+            ref="searchInputRef"
+            v-model="searchQuery"
+            class="search-input"
+            placeholder="查找格式化结果..."
+            @keydown="handleSearchKeydown"
+          />
+          <span class="search-counter">{{ searchCounter }}</span>
+          <button class="search-button" @click="goToPreviousMatch" :disabled="searchMatches.length === 0">上一个</button>
+          <button class="search-button" @click="goToNextMatch" :disabled="searchMatches.length === 0">下一个</button>
+          <button class="search-close" @click="closeSearch">×</button>
+        </div>
+        <div ref="outputRef" class="json-output">
+          <pre v-if="processedOutput"><code v-if="searchQuery" v-html="highlightedSearchOutput"></code><code v-else-if="isJson(processedOutput)" v-html="highlightCode(processedOutput)"></code><code v-else>{{ processedOutput }}</code></pre>
           <div v-else class="empty-output">
             {{ errorMessage ? '输入格式错误' : '请在左侧输入内容' }}
           </div>
@@ -370,6 +527,11 @@ onMounted(() => {
   color: #333;
 }
 
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .copy-button {
   padding: 4px 12px;
   font-size: 12px;
@@ -386,6 +548,61 @@ onMounted(() => {
 }
 
 .copy-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 4px 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 12px;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: #1890ff;
+}
+
+.search-counter {
+  min-width: 44px;
+  color: #666;
+  font-size: 12px;
+  text-align: center;
+}
+
+.search-button,
+.search-close {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.search-button:hover:not(:disabled),
+.search-close:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.search-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -464,6 +681,18 @@ onMounted(() => {
 }
 :deep(.json-output code .hljs-punctuation) {
   color: #333 !important;
+}
+
+:deep(.json-output code .search-match) {
+  padding: 1px 0;
+  border-radius: 2px;
+  background-color: #ffe58f;
+  color: #333;
+}
+
+:deep(.json-output code .search-match.active) {
+  background-color: #ff9c6e;
+  box-shadow: 0 0 0 1px #fa541c;
 }
 
 .empty-output {
