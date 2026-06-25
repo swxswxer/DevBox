@@ -4,6 +4,7 @@ import HelloWorld from './components/HelloWorld.vue'
 import JsonFormatter from './components/JsonFormatter.vue'
 import TextDiff from "./components/TextDiff.vue";
 import Md5AndBase64 from "./components/Md5AndBase64.vue";
+import LeShuaPaySign from "./components/LeShuaPaySign.vue";
 import ImagePreview from "./components/ImagePreview.vue";
 import QRCodeGenerator from "./components/QRCodeGenerator.vue";
 import HmacSm3 from "./components/HmacSm3.vue";
@@ -15,6 +16,7 @@ const navItems = [
   { id: 'json-formatter', name: 'JSON格式化', component: JsonFormatter },
   { id: 'text-diff', name: '文本比对', component: TextDiff },
   { id: 'md5AndBase64', name: 'MD5和Base64', component: Md5AndBase64 },
+  { id: 'leshua-pay-sign', name: '乐刷支付接口加签', component: LeShuaPaySign },
   { id: 'HmacSm3', name: 'HmacSm3加密', component: HmacSm3 },
   { id: 'url-encode', name: 'URL编码解码', component: UrlEncode },
   { id: 'image-preview', name: '乐刷图片预览', component: ImagePreview },

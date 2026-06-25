@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*"
+      - "leshua-v*"
       - "devbox-v*"
   workflow_dispatch:
     inputs:
@@ -28,6 +29,9 @@ jobs:
       tag: ${{ steps.meta.outputs.tag }}
       version: ${{ steps.meta.outputs.version }}
       suffix: ${{ steps.meta.outputs.suffix }}
+      flavor: ${{ steps.meta.outputs.flavor }}
+      release_name: ${{ steps.meta.outputs.release_name }}
+      artifact_prefix: ${{ steps.meta.outputs.artifact_prefix }}
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -40,9 +44,11 @@ jobs:
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
           
-          # 判断 tag 后缀，确定目标分支
-          if [[ "$TAG" == *"-urlencode"* ]]; then
-            TARGET_BRANCH="feat/urlencodeTool"
+          # 根据 tag 前缀确定发布分支：
+          # v*          -> main 公开版
+          # leshua-v*   -> internal/leshua-tools 乐刷版
+          if [[ "$TAG" == leshua-v* ]]; then
+            TARGET_BRANCH="internal/leshua-tools"
           else
             TARGET_BRANCH="main"
           fi
@@ -65,18 +71,35 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             # 手动触发
             VERSION="${{ github.event.inputs.version }}"
-            SUFFIX="${{ github.event.inputs.branch }}"
-            if [ "$SUFFIX" != "main" ]; then
-              TAG="v${VERSION}-${SUFFIX}"
+            BRANCH="${{ github.event.inputs.branch }}"
+            if [ "$BRANCH" == "internal/leshua-tools" ]; then
+              TAG="leshua-v${VERSION}"
+              SUFFIX="leshua"
+              FLAVOR="leshua"
+              RELEASE_NAME="DevBox Leshua v${VERSION}"
+              ARTIFACT_PREFIX="DevBox_leshua"
             else
               TAG="v${VERSION}"
+              SUFFIX=""
+              FLAVOR="public"
+              RELEASE_NAME="DevBox v${VERSION}"
+              ARTIFACT_PREFIX="DevBox"
             fi
           else
             # Tag 触发
             TAG="${GITHUB_REF_NAME}"
             VERSION="$(echo "$TAG" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)"
-            # 提取后缀（如 -urlencode）
-            SUFFIX="$(echo "$TAG" | sed -E 's/^v[0-9]+\.[0-9]+\.[0-9]+//' | sed 's/^-//')"
+            if [[ "$TAG" == leshua-v* ]]; then
+              SUFFIX="leshua"
+              FLAVOR="leshua"
+              RELEASE_NAME="DevBox Leshua v${VERSION}"
+              ARTIFACT_PREFIX="DevBox_leshua"
+            else
+              SUFFIX=""
+              FLAVOR="public"
+              RELEASE_NAME="DevBox v${VERSION}"
+              ARTIFACT_PREFIX="DevBox"
+            fi
           fi
           
           if [ -z "$VERSION" ]; then
@@ -87,7 +110,10 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
-          echo "✅ 发布版本: $VERSION${SUFFIX:+-$SUFFIX}"
+          echo "flavor=$FLAVOR" >> "$GITHUB_OUTPUT"
+          echo "release_name=$RELEASE_NAME" >> "$GITHUB_OUTPUT"
+          echo "artifact_prefix=$ARTIFACT_PREFIX" >> "$GITHUB_OUTPUT"
+          echo "✅ 发布版本: $RELEASE_NAME"
 
   build-windows:
     name: 构建 Windows 版本
@@ -131,7 +157,7 @@ jobs:
       - name: 重命名构建产物
         run: |
           $source = "build/bin/DevBox.exe"
-          $target = "DevBox_windows_x64.exe"
+          $target = "${{ needs.validate-tag.outputs.artifact_prefix }}_windows_x64.exe"
           $targetPath = "build/bin/" + $target
 
           if (Test-Path $source) {
@@ -207,7 +233,7 @@ jobs:
           ARCH="${{ matrix.platform }}"
           APP_NAME="DevBox"
           APP_PATH="build/bin/${APP_NAME}.app"
-          DMG_NAME="${APP_NAME}_macos_${ARCH}.dmg"
+          DMG_NAME="${{ needs.validate-tag.outputs.artifact_prefix }}_macos_${ARCH}.dmg"
 
           if [ ! -d "$APP_PATH" ]; then
             echo "❌ 未找到 .app 文件: $APP_PATH"
@@ -256,14 +282,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.validate-tag.outputs.tag }}
-          name: "DevBox v${{ needs.validate-tag.outputs.version }}${{ needs.validate-tag.outputs.suffix && format('-{0}', needs.validate-tag.outputs.suffix) || '' }}"
+          name: "${{ needs.validate-tag.outputs.release_name }}"
           body: |
 
             | 平台 | 架构 | 文件名 |
             |------|------|--------|
-            | Windows | x64 (64位) | DevBox_windows_x64.exe |
-            | macOS | x64 (Intel) | DevBox_macos_x64.dmg |
-            | macOS | arm64 (Apple Silicon) | DevBox_macos_arm64.dmg |
+            | Windows | x64 (64位) | ${{ needs.validate-tag.outputs.artifact_prefix }}_windows_x64.exe |
+            | macOS | x64 (Intel) | ${{ needs.validate-tag.outputs.artifact_prefix }}_macos_x64.dmg |
+            | macOS | arm64 (Apple Silicon) | ${{ needs.validate-tag.outputs.artifact_prefix }}_macos_arm64.dmg |
 
             ### 安装说明
 
