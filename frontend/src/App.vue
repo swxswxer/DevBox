@@ -4,7 +4,6 @@ import HelloWorld from './components/HelloWorld.vue'
 import JsonFormatter from './components/JsonFormatter.vue'
 import TextDiff from "./components/TextDiff.vue";
 import Md5AndBase64 from "./components/Md5AndBase64.vue";
-import ImagePreview from "./components/ImagePreview.vue";
 import QRCodeGenerator from "./components/QRCodeGenerator.vue";
 import HmacSm3 from "./components/HmacSm3.vue";
 import UrlEncode from "./components/UrlEncode.vue";
@@ -17,7 +16,6 @@ const navItems = [
   { id: 'md5AndBase64', name: 'MD5和Base64', component: Md5AndBase64 },
   { id: 'HmacSm3', name: 'HmacSm3加密', component: HmacSm3 },
   { id: 'url-encode', name: 'URL编码解码', component: UrlEncode },
-  { id: 'image-preview', name: '乐刷图片预览', component: ImagePreview },
   { id: 'QRCode-Generator', name: '地址转二维码', component: QRCodeGenerator },
 ]
 
