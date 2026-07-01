@@ -33,7 +33,7 @@ function parseCallback(input) {
       ignoreAttributes: false,
       ignoreDeclaration: true,
       parseTagValue: false,
-      trimValues: false
+      trimValues: true
     })
     const parsed = parser.parse(trimmed)
     const keys = Object.keys(parsed)
